@@ -89,7 +89,7 @@ function Authority() {
             setQuestions([]);
         } catch (error) {
             console.error(error);
-            alert('Error saving configuration blueprint.');
+            alert(`Error saving configuration blueprint: ${error.response?.data?.error || error.message}`);
         }
     };
 

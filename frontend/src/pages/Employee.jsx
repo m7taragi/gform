@@ -40,7 +40,7 @@ function Employee() {
             setSubmitted(true);
             setAnswers({});
         } catch (err) {
-            alert("Submission error occurred.");
+            alert(`Submission error occurred: ${err.response?.data?.error || err.message}`);
         }
     };
 
