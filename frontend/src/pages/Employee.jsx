@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { CheckCircle, ClipboardList } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 
 function Employee() {
     const { user } = useContext(AuthContext);
@@ -12,7 +13,7 @@ function Employee() {
 
     useEffect(() => {
         // Pull the active structural blueprints created by Authorities
-        axios.get('http://localhost:5000/api/forms')
+        axios.get(`${API_BASE_URL}/forms`)
             .then(res => setForms(res.data))
             .catch(err => console.error("Error pulling surveys", err));
     }, []);
@@ -35,7 +36,7 @@ function Employee() {
                 }))
             };
 
-            await axios.post(`http://localhost:5000/api/forms/${selectedForm._id}/submit`, submissionPayload);
+            await axios.post(`${API_BASE_URL}/forms/${selectedForm._id}/submit`, submissionPayload);
             setSubmitted(true);
             setAnswers({});
         } catch (err) {

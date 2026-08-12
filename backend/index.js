@@ -25,14 +25,29 @@ app.use(async (req, res, next) => {
 // Register API Routes
 app.use('/api/forms', formRoutes); // 2. Mount routes onto /api/forms
 
+// Root Endpoint
+app.get('/', (req, res) => {
+    res.status(200).json({
+        status: 'UP',
+        message: 'Insights API Backend Service is active.',
+        endpoints: {
+            health: '/api/health',
+            forms: '/api/forms'
+        }
+    });
+});
+
 // Health Check Route
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'UP', message: 'Insights Backend is running cleanly.' });
 });
 
-// const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => {
-//     console.log(`Server running on port ${PORT}`);
-// });
+// Local dev server execution listener
+if (require.main === module) {
+    const PORT = process.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
 
 module.exports = app;

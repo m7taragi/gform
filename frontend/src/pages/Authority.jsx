@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { PlusCircle, Trash2, Save, FileSpreadsheet } from 'lucide-react';
+import { API_BASE_URL } from '../config/api';
 
 function Authority() {
     const [title, setTitle] = useState('');
@@ -76,7 +77,7 @@ function Authority() {
             return;
         }
         try {
-            const response = await axios.post('http://localhost:5000/api/forms', {
+            const response = await axios.post(`${API_BASE_URL}/forms`, {
                 title,
                 description,
                 questions
@@ -229,7 +230,7 @@ function ExcelExportManager({ formId, questionsList }) {
         setLoading(true);
         try {
             // 1. Fetch raw responses from the MongoDB cloud
-            const response = await fetch(`http://localhost:5000/api/forms/${formId}/responses`);
+            const response = await fetch(`${API_BASE_URL}/forms/${formId}/responses`);
             const rawSubmissions = await response.json();
 
             if (rawSubmissions.length === 0) {
