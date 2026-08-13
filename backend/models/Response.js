@@ -1,26 +1,30 @@
 const mongoose = require('mongoose');
 
-const AnswerSchema = new mongoose.Schema({
-    shortHeading: { type: String, required: true },
-    value: { type: mongoose.Schema.Types.Mixed }
-}, { _id: false });
-
 const ResponseSchema = new mongoose.Schema({
-    formId: {
+    submissionId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Form',
-        required: true
+        ref: 'Submission',
+        required: true,
+        index: true
     },
-    respondentType: {
-        type: String,
-        enum: ['authority', 'employee', 'customer'],
-        default: 'employee'
+    questionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Question',
+        required: true,
+        index: true
     },
-    trackerId: {
-        type: String,
-        default: 'N/A'
+    value: {
+        type: Number,
+        required: true,
+        default: 0
     },
-    answers: [AnswerSchema]
+    userEnteredCumulative: {
+        type: Number,
+        default: null
+    }
 }, { timestamps: true });
+
+// Compound index to quickly fetch/upsert responses for a specific submission and question
+ResponseSchema.index({ submissionId: 1, questionId: 1 }, { unique: true });
 
 module.exports = mongoose.model('Response', ResponseSchema);

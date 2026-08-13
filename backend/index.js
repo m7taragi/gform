@@ -2,7 +2,9 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/db'); // 1. Import connection script
-const formRoutes = require('./routes/formRoutes'); // 1. Import your routes
+const formRoutes = require('./routes/formRoutes');
+const submissionRoutes = require('./routes/submissionRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 dotenv.config();
 
@@ -23,7 +25,9 @@ app.use(async (req, res, next) => {
 });
 
 // Register API Routes
-app.use('/api/forms', formRoutes); // 2. Mount routes onto /api/forms
+app.use('/api/forms', formRoutes);
+app.use('/api/submissions', submissionRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Root Endpoint
 app.get('/', (req, res) => {
@@ -32,7 +36,9 @@ app.get('/', (req, res) => {
         message: 'Insights API Backend Service is active.',
         endpoints: {
             health: '/api/health',
-            forms: '/api/forms'
+            forms: '/api/forms',
+            submissions: '/api/submissions',
+            reports: '/api/reports'
         }
     });
 });
