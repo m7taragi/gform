@@ -44,7 +44,7 @@ app.get('/', (req, res) => {
 });
 
 // Health Check Route
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
     res.status(200).json({ status: 'UP', message: 'Insights Backend is running cleanly.' });
 });
 
