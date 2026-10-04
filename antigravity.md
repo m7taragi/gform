@@ -78,13 +78,13 @@
 * **Open/Closed Principle (OCP):** 
   * `services/`: Encapsulate core operational logic. New application mutations must extend new service implementations rather than refactoring legacy blocks.
 * **Dependency Inversion Principle (DIP):** 
-  * `repositories/`: Abstract Mongoose/MongoDB Atlas data access layers completely. Business services interact exclusively with structural repository contracts, hiding raw query logic.
+  * `repositories/`: Abstract Prisma/PostgreSQL data access layers completely. Business services interact exclusively with structural repository contracts, hiding raw query logic.
   * Modules must depend strictly on structural interfaces, abstractions, or passed-in parameters. Direct class instantiation via `new` inside services or controllers is prohibited; dependencies must be passed down cleanly through constructors.
 
 #### 🗄️ Database Management
-* **Network Interoperability:** Use dedicated `mongodb://` string pooling configurations to route traffic through standard TCP port layers, ensuring clean compatibility with firewalled enterprise/local LAN networks and eliminating DNS anomalies from `mongodb+srv://` SRV pointers.
-* **Connection Pooling:** Implement a global, cached database client connection pooling mechanism within `config/db.js` to reuse open sockets across API cycles.
-* **Payload Verification:** Intercept incoming payload signatures at the router boundary to mitigate NoSQL query injection exploits before execution reaches downstream data persistence layers.
+* **Network Interoperability:** Use Supabase as the designated PostgreSQL provider. The `.env` must define `DATABASE_URL` (Transaction pooled connection for the API, usually via port 6543) and `DIRECT_URL` (Session connection for Prisma migrations, usually via port 5432).
+* **Connection Pooling:** Instantiate and export a singleton `PrismaClient` instance within `config/db.js` to reuse connections, backed by Supabase's pgBouncer transaction pooler.
+* **Payload Verification:** Intercept incoming payload signatures at the router boundary to mitigate SQL/ORM injection exploits before execution reaches downstream data persistence layers.
 * **Cryptographic Token Verification / Server-Side Gate:** The backend controller must independently verify the incoming token against the official authentication service infrastructure using the server-side `google-auth-library` verification token routing step to verify its integrity before granting platform workspace access.
 
 ---
