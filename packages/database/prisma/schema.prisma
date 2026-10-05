@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Form {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  isPublic    Boolean  @default(true)
+  isActive    Boolean  @default(true)
+  limitOneResponse Boolean @default(false)
+  customSubmitMessage String?
+  layout      String   @default("single_page")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions   Question[]
+  submissions Submission[]
+}
+
+model Question {
+  id                  String   @id @default(uuid())
+  formId              String
+  form                Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  parentId            String?
+  parent              Question? @relation("QuestionHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children            Question[] @relation("QuestionHierarchy")
+  shortHeading        String
+  questionText        String
+  dataType            String   @default("text")
+  options             String?  // JSON stringified array of options
+  showIf              String?  // JSON representation of { dependsOnId, operator, value }
+  isRequired          Boolean  @default(false)
+  isRepeatable        Boolean  @default(false)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  responses           Response[]
+
+  @@index([formId, parentId, sortOrder])
+}
+
+model Submission {
+  id          String   @id @default(uuid())
+  formId      String
+  form        Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  submittedBy String?
+  user        User?    @relation(fields: [submittedBy], references: [id], onDelete: SetNull)
+  status      String   @default("submitted")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  responses   Response[]
+
+  @@index([status, createdAt])
+}
+
+model Response {
+  id                    String     @id @default(uuid())
+  submissionId          String
+  submission            Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  questionId            String
+  question              Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  value                 String?    // Can hold encrypted PII or generic text answers
+  iterationIndex        Int        @default(0)
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  @@unique([submissionId, questionId, iterationIndex])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String?  // Optional to support @react-oauth/google
+  avatarUrl String?
+  role      String   @default("user")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions  Submission[]
+  consentLogs  ConsentLog[]
+}
+
+// Digital Contract / Consent Management (DPDP / DPBI Compliance)
+model ConsentLog {
+  id            String   @id @default(uuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policyVersion String   // e.g., "v1.2"
+  hashedIp      String   // Hashed for PII protection
+  acceptedAt    DateTime @default(now())
+
+  @@index([userId, acceptedAt])
+}
+
+model SectionTemplate {
+  id          String   @id @default(uuid())
+  name        String
+  content     String
+  createdAt   DateTime @default(now())
+}
+model MasterData {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  data        String   // JSON payload (array or tree)
+  createdAt   DateTime @default(now())
+}
+

@@ -12,80 +12,68 @@
 
 ## 📌 1. Monorepo Workspace Boundaries & Security Policy
 
-### 📂 Directory Topography
-* **Root Directory:** `gform/` — Contains global workspace orchestration metadata only.
-* **Backend Workspace:** `gform/backend/` — Node.js runtime executing Express.
-* **Frontend Workspace:** `gform/frontend/` — Vite runtime executing React and native Tailwind CSS v4.0.
+### 📂 Directory Topography (Modular Monolith)
+* **Root Directory:** `gform/` — Contains global workspace orchestration metadata (npm/pnpm workspaces or Turborepo).
+* **Applications:** `gform/apps/`
+  * `web/` — Next.js 16 (App Router) runtime executing React, Server Actions, and native Tailwind CSS v4.0.
+* **Internal Packages:** `gform/packages/`
+  * `database/` — Prisma ORM schema, migrations, and generated client.
+  * `core/` — Domain business logic, Zod validation schemas, and Types.
+  * `compliance/` — Consent management, PII encryption, and data anonymization utilities.
+  * `ui/` — Shared Design System (Tailwind v4 components).
 
 ### 🛡️ Dependency & Runtime Isolation
-* **Strict Boundary Enforcement:** Dependencies must never cross workspace perimeters. Never mix dependencies between workspaces.
-* **Prohibited Actions:** Do not execute `npm install`, `yarn install`, or `pnpm install` within the root directory (`gform/`).
-* **Manifest Autonomy:** Each workspace must independently manage its own locked manifest (`package.json` and lockfile).
+* **Strict Boundary Enforcement:** Domain logic must not leak into the presentation layer. The `web` app imports strictly from `@gform/database`, `@gform/core`, etc.
+* **Manifest Autonomy:** Each package and app must independently manage its own locked manifest (`package.json`), while relying on the root for shared hoisting.
 
 ### 🔑 Cryptographic & Secret Exposure Prevention
-* **Zero Commit Policy:** No production configurations, runtime environment definitions (`.env*`), or cryptographic private keys (`.pem`, `.json`) may enter source control. Strict `.gitignore` configuration is enforced in both workspaces.
-* **Automated Guardrails:** Pre-commit hooks must validate every staging tree before execution to prevent credential leakage.
-* **Secret Injection:** All production configurations must be injected directly through Render environment variables or Cloudflare Wrangler Secret bindings.
-* **Passive Layer Isolation:** The agent must never read variables directly from application configuration objects. All lookups must resolve exclusively through the `process.env` interface at run-time.
-* **Pre-Flight File Scan:** Before modifying any configuration or deployment files (such as `wrangler.toml` or `render.yaml`), the agent must scan the target file for raw strings resembling API keys, private keys, or credentials, and replace them with placeholder references.
-* **Prohibited File Modifications:** The agent is completely restricted from modifying, creating, or appending content to `.gitignore` or any `.env` file without human approval.
+* **Zero Commit Policy:** No production configurations, runtime environment definitions (`.env*`), or cryptographic private keys (`.pem`, `.json`) may enter source control. Strict `.gitignore` configuration is enforced across all apps and packages.
+* **Secret Injection:** All production configurations must be injected directly through deployment environment variables (e.g., Vercel, Cloudflare).
+* **Pre-Flight File Scan:** Before modifying any configuration or deployment files, the agent must scan the target file for raw strings resembling API keys, private keys, or credentials, and replace them with placeholder references.
 
 ---
 
 ## 🛠️ 2. Core Technical Architecture Constraints
 
-### 🎨 Frontend Architecture (`gform/frontend/`)
+### 🏗️ Software Architecture: Clean Architecture & DDD
+* **Presentation Layer (UI/UX):** React Components in `apps/web/src/components`. Must contain *zero* business logic.
+* **Application Layer (Use Cases):** Server Actions and API Route Handlers in `apps/web/src/app`. Orchestrates data flow but does not enforce business rules.
+* **Domain Layer (Business Logic):** Pure functions in `packages/core`. Defines rules of Surveys, Questions, Users, and Consent. Validation via `Zod`.
+* **Infrastructure Layer:** Abstracted implementations in `packages/database` and `packages/compliance`.
+
+### 🎨 Frontend Architecture (`apps/web/`)
 
 #### 🚀 Runtime & Styling
-* **Deployment Target:** Cloudflare Pages (Free Tier optimized, under 20,000 asset limit per build).
-* **Source Stream:** Synchronize components dynamically with the connected Google Stitch MCP Server canvas.
-* **Styling Engine:** Tailwind CSS v4.0 running natively through the `@tailwindcss/vite` compiler plugin.
-* **Legacy Configuration Prohibition:** Legacy configuration topologies (`tailwind.config.js`, `postcss.config.js`) are strictly forbidden.
+* **Deployment Target:** Vercel or Cloudflare Pages (Edge optimized).
+* **Styling Engine:** Tailwind CSS v4.0 running natively through the `@tailwindcss/postcss` compiler plugin.
+* **Data Fetching:** React Server Components (RSC) and Server Actions for mutation. Avoid client-side data fetching unless highly interactive.
 
 #### 📱 UX Design & Responsive Engine
 * **Mobile-First Paradigm:** Design fluid layouts utilizing mobile-first break-points (`sm:`, `md:`, `lg:`, `xl:`). Default classes must target a narrow layout viewport first.
-* **Touch-Target Safe Zoning:** Every actionable control element (such as buttons, links, inputs, or menus) must occupy a clear physical boundary of at least 48 × 48px to preserve natural user accessibility and eliminate misclicks.
-* **Modern Interface Aesthetics:** Layouts must conform to clean enterprise standards: subtle box-shadow boundaries, high-contrast typography scales, explicit skeleton loading states, and micro-interactions.
-* **Cumulative Layout Shift (CLS) Prevention:** When loading data asynchronously or waiting for images, the agent must build dedicated structural loading placeholders (Skeletons) to preserve the visual boundary layout and eliminate layout shift on reload.
+* **Touch-Target Safe Zoning:** Every actionable control element must occupy a clear physical boundary of at least 48 × 48px.
+* **Cumulative Layout Shift (CLS) Prevention:** Utilize `loading.tsx` and Suspense boundaries to build structural loading placeholders (Skeletons).
 
 #### 🌗 Enterprise Theme Engine
-* **Native Context Management:** Implement an architectural context provider (`ThemeProvider`) to prevent Flash of Unstyled Content (FOUC) and track native light/dark modes.
-* **Deterministic Storage:** System must track theme state (`light` | `dark`) using synchronous browser storage APIs (`localStorage`).
-* **System Preference Fallback:** Default to the host device operating system preference (`matchMedia('(prefers-color-scheme: dark)')`) if no user-defined state exists in storage.
-* **State Synchronization Protocol:** The user's visual setting must be locked in a permanent local storage array. The theme determination process must bind to the earliest possible execution layer before the initial layout paints to the screen.
+* **Native Context Management:** Implement an architectural context provider (`ThemeProvider`) to track native light/dark modes and prevent FOUC.
+* **Deterministic Storage:** Track theme state using synchronous browser storage APIs (`localStorage`).
 
 #### 🔐 Authentication & Identity Management
-* **Enterprise SSO:** Implement explicit OAuth 2.0 routing using the official `@react-oauth/google` integration wrapper button.
-* **Secure Client Engine:** Initialize client instances securely via environment variable bindings using `AuthContext.jsx` to track active corporate identities securely.
-* **Session Lifecycle:** Manage active state dynamically via a root-level context layer protecting nested routes through `react-router-dom` Role-Based Access Control (RBAC) switches.
-* **Token-Only Authentication Flow:** The frontend engine must strictly pass the short-lived Google identity signature token down to the server backend. Storing or handling raw user profile information on the client side for authorization checks is banned.
+* **Enterprise SSO:** Implement explicit OAuth 2.0 routing using `@react-oauth/google` integration.
+* **Session Lifecycle:** Manage active state dynamically via Server Actions and HTTP-only encrypted cookies. 
 
 ---
 
-### ⚙️ Backend Architecture (`gform/backend/`)
-
-#### ⚡ Cloud Infrastructure & Lifecycles
-* **Deployment Target:** Render (Free Instance Web Service configuration).
-* **Cold-Start Mitigation:** Systems must elegantly handle the 15-50 second compute spin-up delay characteristic of Render's free tier runtime.
-* **Availability Pings:** Expose an ultra-lightweight, dependency-free `/health` endpoint to handle synthetic status verification, uptime pings, and telemetry.
-
-#### 📐 SOLID Design Pattern Enforcement
-* **Single Responsibility Principle (SRP):** 
-  * `routes/`: Express path allocations, HTTP verb mappings, and input middleware validations (`Zod`).
-  * If a modified route or file handles both business logic (e.g., calculations or data checking) and transport logic (e.g., writing Express responses), the agent must halt execution and split the file into standalone modules.
-* **Interface Segregation Principle (ISP):** 
-  * `controllers/`: Exclusively process Express request and response runtime streams, handling HTTP status codes. No business processes or direct database modifications are allowed inside controllers. They are structurally banned from knowing database configurations, network topologies, or schema structures.
-* **Open/Closed Principle (OCP):** 
-  * `services/`: Encapsulate core operational logic. New application mutations must extend new service implementations rather than refactoring legacy blocks.
-* **Dependency Inversion Principle (DIP):** 
-  * `repositories/`: Abstract Prisma/PostgreSQL data access layers completely. Business services interact exclusively with structural repository contracts, hiding raw query logic.
-  * Modules must depend strictly on structural interfaces, abstractions, or passed-in parameters. Direct class instantiation via `new` inside services or controllers is prohibited; dependencies must be passed down cleanly through constructors.
+### ⚙️ Backend Architecture & Database
 
 #### 🗄️ Database Management
-* **Network Interoperability:** Use Supabase as the designated PostgreSQL provider. The `.env` must define `DATABASE_URL` (Transaction pooled connection for the API, usually via port 6543) and `DIRECT_URL` (Session connection for Prisma migrations, usually via port 5432).
-* **Connection Pooling:** Instantiate and export a singleton `PrismaClient` instance within `config/db.js` to reuse connections, backed by Supabase's pgBouncer transaction pooler.
-* **Payload Verification:** Intercept incoming payload signatures at the router boundary to mitigate SQL/ORM injection exploits before execution reaches downstream data persistence layers.
-* **Cryptographic Token Verification / Server-Side Gate:** The backend controller must independently verify the incoming token against the official authentication service infrastructure using the server-side `google-auth-library` verification token routing step to verify its integrity before granting platform workspace access.
+* **Network Interoperability:** Supabase (PostgreSQL). The `.env` must define `DATABASE_URL` (Transaction pooled connection for the API) and `DIRECT_URL` (Session connection for Prisma migrations).
+* **Connection Pooling:** Instantiate a singleton `PrismaClient` within `packages/database` to reuse connections, backed by Supabase's pgBouncer transaction pooler.
+* **Row-Level Security (RLS):** Enforce strict tenant isolation. Users must only be able to read/write their own data, adding a database-level safety net against IDOR vulnerabilities.
+
+#### ⚖️ Legal Compliance (DPDP, DPBI)
+* **Consent Management:** Implement an explicit `ConsentLog` table. Store immutable records containing user ID, privacy policy version, hashed IP, and timestamp.
+* **PII Data Segregation:** Separate highly sensitive PII from analytical survey data. Use application-level encryption for sensitive fields prior to database persistence.
+* **Right to be Forgotten:** Architect the database with strict foreign key constraints (`ON DELETE CASCADE`) or soft-delete patterns to easily scrub profiles and anonymize historical survey responses upon request.
 
 ---
 
@@ -94,4 +82,4 @@
 * **Human Sign-off:** Await explicit human approval after presenting the implementation plan.
 * **Code Quality:** Avoid generating pseudo-code or trailing placeholder comments like `// TODO: implement later`.
 * **Production Ready:** All generated code blocks must be fully completed and ready for deployment.
-* **Environment Safety:** Never hardcode system credentials, connection strings, or Google Stitch API keys. All infrastructure tokens must be read exclusively through `process.env`.
+* **Environment Safety:** Never hardcode system credentials. All infrastructure tokens must be read exclusively through `process.env`.

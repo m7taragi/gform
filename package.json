@@ -1,0 +1,8 @@
+{
+  "name": "gform-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
